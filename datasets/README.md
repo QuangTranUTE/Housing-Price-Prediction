@@ -1,4 +1,4 @@
-The training data (`GiaChungCu_HCM_June2021_laydulieu_com.csv`) are taken from http://www.laydulieu.com/nha-dat/ in June 2021. The following columns are filtered:
+The training data `GiaChungCu_HCM_June2021_laydulieu_com.csv` are taken from http://www.laydulieu.com/nha-dat/ in June 2021. The following columns are filtered:
 
 * Chuyên mục: filter value: "Căn hộ, Chung cư"
 * Nhu cầu: filter value: "Cần bán"
