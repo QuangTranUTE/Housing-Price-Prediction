@@ -11,7 +11,7 @@ If you living in HCMC (or just want to know about housing price there: Colab.
 
 ## How to use it
 The `end_to_end.py` is full code
-For prediction: use the colab code
+For prediction: use the [colab](https://colab.research.google.com/drive/1w-ISNEscUq40rGm2gld8_fKZSLBkqMf4?usp=sharing) code
 
 
 ## Reference
