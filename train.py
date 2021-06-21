@@ -134,6 +134,7 @@ print('\n____________ Processed feature values ____________')
 print(processed_train_set_val[[0, 1, 2],:].toarray())
 print(processed_train_set_val.shape)
 print('We have %d numeric feature + 1 added features + 35 cols of onehotvector for categorical features.' %(len(num_feat_names)))
+joblib.dump(full_pipeline, r'models/full_pipeline.pkl')
 
 # (optional) Add header to create dataframe. Just to see. We don't need header to run algorithms 
 if True: 
@@ -421,7 +422,9 @@ if type(best_model).__name__ == "RandomForestRegressor":
     print('\nFeatures and importance score: ')
     print(*sorted(zip( feature_names, feature_importances.round(decimals=4)), key = lambda row: row[1], reverse=True),sep='\n')
 
-# 7.3 Run on test data:
+#%% 7.3 Run on test data:
+full_pipeline = joblib.load(r'models/full_pipeline.pkl')
+best_model = joblib.load(r'models/SOLUTION_model.pkl')
 processed_test_set = full_pipeline.transform(test_set)  
 # Compute R2 score and root mean squared error:
 r2score, rmse = r2score_and_rmse(best_model, processed_test_set, test_set_labels)
@@ -436,3 +439,5 @@ print("Labels:      ", list(test_set_labels[0:9]),'\n')
 #endregion
 
 
+
+# %%
