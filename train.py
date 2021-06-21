@@ -1,16 +1,18 @@
 ''' 
 HOCHIMINH CITY APARTMENT PRICE PREDICTION
-Data taken in June 2021
+Data last update: in June 2021
 https://github.com/QuangTranUTE/Housing-Price-Prediction 
 quangtn@hcmute.edu.vn
 
 **Disclaimer:** This code serves research and educational purpose only. No guarantee of accuracy for other purposes.
 
 INSTRUCTIONS:
-    TO DO ###############
-    + Run entire code: if you want to train your model from scratch. You can easily customize the model and stuff by changing hyperparameters put at the beginning of code parts (marked with comments NOTE: HYPERPARAM)
-    + Run only Part 1 & Part 4: if you already trained (and saved) a model and want to do prediction (review analysis).
-For other instructions, such as how to prepare your data, please see the github repository given above.
+    + Run entire code: if you want use new data, discover them to get insights, train, evaluate and fine-tune your models.     
+    NOTE: remember to set variables "run_new_..."=True to run the code underneath.
+    + Run only Part 1 & Part 7: if you want to make predictions using trained models. 
+    + Run Parts 2, 3, 4: to get insights and prepare your DATA.
+    + Run Parts 5, 6: to train and fine-tune your MODELS.
+    NOTE: feel free to add models in these parts to experiment (e.g., Support Vector Regression, Neural Networks)
 
 Reference: 
 Some parts of this code are based on Chapter 2 in: Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow (2nd ed.) by Aurélien Géron. 
@@ -152,7 +154,7 @@ if True:
 
 
 
-# In[5]: TRAIN AND EVALUATE MODELS 
+# In[5]: PART 5. TRAIN AND EVALUATE MODELS 
 #region
 # 5.1 Try LinearRegression model
 from sklearn.linear_model import LinearRegression
@@ -226,13 +228,9 @@ print("Labels:      ", list(train_set_labels[0:9]))
 from sklearn.preprocessing import PolynomialFeatures
 poly_feat_adder = PolynomialFeatures(degree = 2) 
 train_set_poly_added = poly_feat_adder.fit_transform(processed_train_set_val)
-new_training = 10
-if new_training:
-    model = LinearRegression()
-    model.fit(train_set_poly_added, train_set_labels)
-    store_model(model, model_name = "PolinomialRegression")      
-else:
-    model = load_model("PolinomialRegression")
+model = LinearRegression()
+model.fit(train_set_poly_added, train_set_labels)
+store_model(model, model_name = "PolinomialRegression")      
 # Compute R2 score and root mean squared error:
 print('\n____________ Polinomial regression ____________')
 r2score, rmse = r2score_and_rmse(model, train_set_poly_added, train_set_labels)
@@ -310,7 +308,7 @@ else:
 
 
 
-# In[6]: FINE-TUNE MODELS 
+# In[6]: PART 6. FINE-TUNE MODELS 
 # NOTE: this takes time.
 #region
 print('\n____________ Fine-tune models ____________')
@@ -323,85 +321,47 @@ def print_search_result(grid_search, model_name = ""):
     cv_results = grid_search.cv_results_
     for (mean_score, params) in zip(cv_results["mean_test_score"], cv_results["params"]):
         print('rmse =', np.sqrt(-mean_score).round(decimals=1), params) 
+from sklearn.model_selection import RandomizedSearchCV
+from scipy.stats import randint  
+cv = KFold(n_splits=5,shuffle=True,random_state=37)
 
-method = 1
-# 6.1 Method 1: Grid search 
-if method == 1:
-    from sklearn.model_selection import GridSearchCV
-    cv = KFold(n_splits=5,shuffle=True,random_state=37) 
-        
-    run_new_search = False      
-    if run_new_search:        
-        # Fine-tune RandomForestRegressor:
-        model = RandomForestRegressor()
-        param_grid = [
-            {'bootstrap': [True], 'n_estimators': [3, 15, 30], 'max_features': [2, 12, 20, 39]},
-            {'bootstrap': [False], 'n_estimators': [3, 5, 10, 20], 'max_features': [2, 6, 10]} ]
-        grid_search = GridSearchCV(model, param_grid, cv=cv, scoring='neg_mean_squared_error', return_train_score=True, 
-        refit=True) 
-        grid_search.fit(processed_train_set_val, train_set_labels)
-        joblib.dump(grid_search,'saved_objects/RandomForestRegressor_gridsearch.pkl')
-        print_search_result(grid_search, model_name = "RandomForestRegressor")      
+run_new_search = False     
+if run_new_search:
+    # Fine-tune RandomForestRegressor:
+    model = RandomForestRegressor(random_state=48)
+    param_distribs = {
+        'n_estimators': randint(low=1, high=150),
+        'max_features': randint(low=1, high=39),
+        'bootstrap':  randint(low=0, high=2) } 
+    rnd_search = RandomizedSearchCV(model, param_distributions=param_distribs, n_iter=30, cv=cv, scoring='neg_mean_squared_error', random_state=42)
+    rnd_search.fit(processed_train_set_val, train_set_labels)
+    joblib.dump(rnd_search,'saved_objects/RandomForestRegressor_randsearch.pkl') 
+    print_search_result(rnd_search, model_name = "RandomForestRegressor") 
 
-        # Fine-tune Polinomial regression:          
-        model = Pipeline([ ('poly_feat_adder', PolynomialFeatures()),  
-                           ('lin_reg', LinearRegression()) ]) 
-        param_grid = [
-            {'poly_feat_adder__degree': [1, 2, 3]} ]
-        grid_search = GridSearchCV(model, param_grid, cv=cv, scoring='neg_mean_squared_error', return_train_score=True)
-        grid_search.fit(processed_train_set_val, train_set_labels)
-        joblib.dump(grid_search,'saved_objects/PolinomialRegression_gridsearch.pkl') 
-        print_search_result(grid_search, model_name = "PolinomialRegression") 
-    else:
-        # Load grid_search
-        grid_search = joblib.load('saved_objects/RandomForestRegressor_gridsearch.pkl')
-        print_search_result(grid_search, model_name = "RandomForestRegressor")         
-        grid_search = joblib.load('saved_objects/PolinomialRegression_gridsearch.pkl')
-        print_search_result(grid_search, model_name = "PolinomialRegression") 
-
-# 6.2 Method 2: Random search 
-elif method == 2:
-    from sklearn.model_selection import RandomizedSearchCV
-    from scipy.stats import randint  
-    cv = KFold(n_splits=5,shuffle=True,random_state=37)
-        
-    run_new_search = 0     
-    if run_new_search:
-        # Fine-tune RandomForestRegressor:
-        model = RandomForestRegressor(random_state=48)
-        param_distribs = {
-            'n_estimators': randint(low=1, high=150),
-            'max_features': randint(low=1, high=39),
-            'bootstrap':  randint(low=0, high=2) } 
-        rnd_search = RandomizedSearchCV(model, param_distributions=param_distribs, n_iter=30, cv=cv, scoring='neg_mean_squared_error', random_state=42)
-        rnd_search.fit(processed_train_set_val, train_set_labels)
-        joblib.dump(rnd_search,'saved_objects/RandomForestRegressor_randsearch.pkl') 
-        print_search_result(rnd_search, model_name = "RandomForestRegressor") 
-
-        # Fine-tune Polynomial regression:
-        # CAUTION: High degree polynomial consumes much memory, you may run out of RAM. 
-        model = Pipeline([ ('poly_feat_adder', PolynomialFeatures()),
-                           ('lin_reg', LinearRegression()) ]) 
-        param_distribs = {
-            'poly_feat_adder__degree': randint(low=1, high=4) }     
-        rnd_search = RandomizedSearchCV(model, param_distributions=param_distribs, n_iter=2, cv=cv, scoring='neg_mean_squared_error', random_state=42)
-        rnd_search.fit(processed_train_set_val, train_set_labels)
-        joblib.dump(rnd_search,'saved_objects/PolinomialRegression_randsearch.pkl') 
-        print_search_result(rnd_search, model_name = "PolinomialRegression") 
-    else:
-        # Load grid_search
-        rnd_search = joblib.load('saved_objects/RandomForestRegressor_randsearch.pkl')
-        print_search_result(rnd_search, model_name = "RandomForestRegressor")         
-        rnd_search = joblib.load('saved_objects/PolinomialRegression_randsearch.pkl')
-        print_search_result(rnd_search, model_name = "PolinomialRegression") 
+    # Fine-tune Polynomial regression:
+    # CAUTION: High degree polynomial consumes much memory, you may run out of RAM. 
+    model = Pipeline([ ('poly_feat_adder', PolynomialFeatures()),
+                        ('lin_reg', LinearRegression()) ]) 
+    param_distribs = {
+        'poly_feat_adder__degree': randint(low=1, high=4) }     
+    rnd_search = RandomizedSearchCV(model, param_distributions=param_distribs, n_iter=2, cv=cv, scoring='neg_mean_squared_error', random_state=42)
+    rnd_search.fit(processed_train_set_val, train_set_labels)
+    joblib.dump(rnd_search,'saved_objects/PolinomialRegression_randsearch.pkl') 
+    print_search_result(rnd_search, model_name = "PolinomialRegression") 
+else:
+    # Load grid_search
+    rnd_search = joblib.load('saved_objects/RandomForestRegressor_randsearch.pkl')
+    print_search_result(rnd_search, model_name = "RandomForestRegressor")         
+    rnd_search = joblib.load('saved_objects/PolinomialRegression_randsearch.pkl')
+    print_search_result(rnd_search, model_name = "PolinomialRegression") 
 #endregion
 
 
 
-# In[7]: ANALYZE AND TEST THE BEST MODEL
+# In[7]: PART 7. ANALYZE AND TEST THE BEST MODEL
 #region:
 # 7.1 Pick the best model (random forest):
-search = joblib.load('saved_objects/RandomForestRegressor_gridsearch.pkl')
+search = joblib.load('saved_objects/RandomForestRegressor_randsearch.pkl')
 best_model = search.best_estimator_
 
 # 7.2 Analyse the solution to get more insights about the data:
@@ -438,6 +398,3 @@ print("Labels:      ", list(test_set_labels[0:9]),'\n')
 
 #endregion
 
-
-
-# %%
